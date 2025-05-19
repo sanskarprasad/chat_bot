@@ -22,3 +22,52 @@ Headquarters: 123 Tech Avenue, Silicon Valley, CA
 [2025-05-19 23:31:59] Bot: The provided text does not name the CEO of Innovatech Solutions.
 [2025-05-19 23:32:11] You: recent news
 [2025-05-19 23:32:11] Bot: Innovatech Solutions recently launched 'AI-Assist Pro', a platform to help small businesses use AI.  It also partnered with a major healthcare provider to develop AI tools for early disease detection.  Both received positive feedback.
+
+=== Chat Session Started: 2025-05-20 00:09:35 ===
+[2025-05-20 00:09:59] You: what do we need to do in this assignment
+[2025-05-20 00:09:59] Bot: The provided text is a company overview for Innovatech Solutions.  There is no assignment described in the context.
+
+=== Chat Session Started: 2025-05-20 00:12:51 ===
+[2025-05-20 00:13:07] You: what needs to be dont in this assignment?
+[2025-05-20 00:13:07] Bot: This question cannot be answered from the given context.  The provided text is a company overview, not an assignment description.
+
+=== Chat Session Started: 2025-05-20 00:19:08 ===
+[2025-05-20 00:19:29] You: “Who is the CTO of DataNova?”
+[2025-05-20 00:19:29] Bot: This question cannot be answered from the given context.
+
+=== Session start: 2025-05-20 00:25:35 ===
+[2025-05-20 00:25:54] You: “Who is the CTO of DataNova?”
+[2025-05-20 00:25:54] Bot: This question cannot be answered from the given text.
+[2025-05-20 00:26:54] You: What services does DataNova provide?”
+[2025-05-20 00:26:54] Bot: DataNova Analytics offers big data, BI, and cloud analytics services.
+[2025-05-20 00:27:41] You: what is quesiton 1
+[2025-05-20 00:27:41] Bot: SUBJECT – COMPUTER
+1) What is the use of computer in our life? [Answer in 50 words]
+[2025-05-20 00:28:09] You: what needs to be done in this assgn
+[2025-05-20 00:28:09] Bot: The assignment requires completing tasks in several subjects:
+
+**EVS:**  Answering a question about balanced diets, creating a vegetable chart with benefits, making a food chart with components, crafting a product from waste, and writing a paragraph with a picture about World Environment Day.
+
+**GK:** Pasting a map of India, learning and writing all Indian states and capitals, and writing about two countries including their symbols, flags, monuments, and currency.
+
+**English:** Writing five pages of writing, ten lines of a poem ("Team Work"), completing rhyming word exercises from page 23, a picture composition from page 25, and a paragraph about the class teacher.
+
+**Computer:** Answering a question about computer use (50 words) and drawing a computer system.
+
+**Math:** Writing Roman numerals from 51 to 150, solving a word problem about stamps, and solving three math problems (multiplication and division).
+
+**Hindi:** Writing short paragraphs on family and Diwali, writing words from a given list, writing a page of diary entries, and writing about the importance of trees.
+
+=== Session start: 2025-05-20 00:29:53 ===
+[2025-05-20 00:30:11] You: what needs to be done in this assignment
+[2025-05-20 00:30:11] Bot: This assignment requires building a Retrieval-Augmented Generation (RAG) chatbot using LangChain and Python.  This involves three tasks:
+
+1.  **Data Loading:** Load a dataset (CSV, JSON, or other document format) to serve as the knowledge base for the chatbot.
+
+2.  **Set Up RAG with LangChain:** Use LangChain to create a RAG pipeline for retrieval and question answering.
+
+3.  **Build the Chatbot:**  Construct a chatbot that uses the RAG pipeline to answer user questions based on the loaded data, ensuring accurate and contextually relevant responses.
+
+Additionally, the assignment requires code documentation adhering to Python coding standards, a sample of questions and responses saved in a file (txt, pdf, or xlsx), and a GitHub repository containing all code and relevant files.  Bonus points are awarded for deploying the chatbot on Streamlit.
+[2025-05-20 00:30:42] You: how many no of question are there for the computer subject
+[2025-05-20 00:30:42] Bot: There are two questions for the Computer subject.

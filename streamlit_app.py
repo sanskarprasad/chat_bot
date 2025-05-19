@@ -1,8 +1,10 @@
 import os
 import json
-from dotenv import load_dotenv
 import time
+import hashlib
+import pandas as pd
 import streamlit as st
+from dotenv import load_dotenv
 from langchain_community.document_loaders import TextLoader, PyPDFLoader
 from langchain.docstore.document import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -12,25 +14,28 @@ from langchain.prompts import PromptTemplate
 from langchain_core.runnables import RunnablePassthrough, RunnableParallel
 from langchain_core.output_parsers import StrOutputParser
 
-# Load environment variables
-time_format = "%Y-%m-%d %H:%M:%S"
+# — Environment & constants —
 load_dotenv()
-api_key = os.getenv("GEMINI_API_KEY")
-if not api_key:
-    st.error("GEMINI_API_KEY not found. Please set it in your .env file.")
+API_KEY = os.getenv("GEMINI_API_KEY")
+if not API_KEY:
+    st.error("Set GEMINI_API_KEY in your .env")
     st.stop()
 
-# Constants
 MODEL_NAME = "gemini-1.5-flash-latest"
-LOG_FILE = "chat_log.txt"
+LOG_FILE   = "chat_log.txt"
+TIME_FMT   = "%Y-%m-%d %H:%M:%S"
 
-# Sidebar settings
+# — Sidebar controls —
 st.sidebar.title("RAG Chatbot Settings")
-chunk_size = st.sidebar.number_input("Chunk Size", value=1000, min_value=100, step=100)
-chunk_overlap = st.sidebar.number_input("Chunk Overlap", value=100, min_value=0, step=50)
+chunk_size    = st.sidebar.number_input("Chunk Size",    value=1000, min_value=100, step=100)
+chunk_overlap = st.sidebar.number_input("Chunk Overlap", value=100,  min_value=0,   step=50)
 
 @st.cache_resource
-def initialize_pipeline(_documents: list[Document]):
+def build_pipeline(_documents: list[Document], file_hash: str):
+    """
+    We include `file_hash` so that whenever the uploaded file changes,
+    this function is re-run, rebuilding FAISS + embeddings + LLM.
+    """
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
@@ -40,64 +45,70 @@ def initialize_pipeline(_documents: list[Document]):
 
     embeddings = GoogleGenerativeAIEmbeddings(
         model="models/embedding-001",
-        google_api_key=api_key
+        google_api_key=API_KEY
     )
-    vector_store = FAISS.from_documents(chunks, embeddings)
-    retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 3})
+    store     = FAISS.from_documents(chunks, embeddings)
+    retriever = store.as_retriever(search_type="similarity", search_kwargs={"k": 3})
 
     llm = ChatGoogleGenerativeAI(
         model=MODEL_NAME,
-        google_api_key=api_key,
+        google_api_key=API_KEY,
         temperature=0.3,
         convert_system_message_to_human=True
     )
 
     prompt = PromptTemplate(
         template=(
-            "You are an AI assistant. Answer based ONLY on context."
-            " If unknown, say so. Context:\n{context}\nQuestion:\n{question}\nAnswer:"),
+            "You are an AI assistant. Answer based ONLY on context.\n"
+            "Context:\n{context}\nQuestion:\n{question}\nAnswer:"
+        ),
         input_variables=["context", "question"]
     )
 
     rag_chain = (
-        RunnablePassthrough.assign(context=(lambda x: "\n\n".join(d.page_content for d in x["context"])))
+        RunnablePassthrough.assign(
+            context=(lambda x: "\n\n".join(d.page_content for d in x["context"]))
+        )
         | prompt
         | llm
         | StrOutputParser()
     )
+
     pipeline = RunnableParallel(
         {"context": retriever, "question": RunnablePassthrough()}
     ).assign(answer=rag_chain)
 
     return pipeline
 
+# — File upload & hashing —
 st.title("RAG Chatbot")
-uploaded_file = st.file_uploader(
-    "Upload your knowledge base", type=["txt", "pdf", "json"]
-)
-
-# Determine file path & loader type
-if uploaded_file:
-    file_ext = uploaded_file.name.split('.')[-1].lower()
-    local_path = f"kb.{file_ext}"
-    with open(local_path, "wb") as f:
-        f.write(uploaded_file.read())
-    file_path = local_path
-elif os.path.exists("innovatech_info.txt"):
-    file_path = "innovatech_info.txt"
+upload = st.file_uploader("Upload KB (txt, pdf, json, csv)", type=["txt","pdf","json","csv"])
+if upload:
+    data = upload.read()
+    # Compute hash of the bytes
+    file_hash = hashlib.md5(data).hexdigest()
+    # Write out a temp file with original extension
+    ext       = upload.name.rsplit(".", 1)[-1].lower()
+    tmp_path  = f"kb_temp.{ext}"
+    with open(tmp_path, "wb") as f:
+        f.write(data)
+    file_path = tmp_path
 else:
-    st.warning("Please upload a .txt, .pdf, or .json file, or add 'innovatech_info.txt' in the directory.")
+    # If no upload, fallback to existing default
+    file_path = "innovatech_info.txt" if os.path.exists("innovatech_info.txt") else None
+    file_hash = "default"  # constant for the default file
+
+if not file_path:
+    st.warning("Upload a file or add innovatech_info.txt")
     st.stop()
 
-# Load documents based on extension
-def load_docs(path: str) -> list[Document]:
-    ext = path.split('.')[-1].lower()
+# — Load documents —
+def load_documents(p: str) -> list[Document]:
+    ext = p.rsplit(".", 1)[-1].lower()
     if ext == "pdf":
-        loader = PyPDFLoader(path)
-        return loader.load()
+        return PyPDFLoader(p).load()
     if ext == "json":
-        with open(path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
+        data = json.load(open(p, encoding="utf-8"))
         docs = []
         if isinstance(data, list):
             for item in data:
@@ -105,37 +116,37 @@ def load_docs(path: str) -> list[Document]:
         else:
             docs.append(Document(page_content=json.dumps(data, ensure_ascii=False)))
         return docs
-    # default to text
-    loader = TextLoader(path, encoding="utf-8")
-    return loader.load()
+    if ext == "csv":
+        df = pd.read_csv(p)
+        docs = []
+        for _, row in df.iterrows():
+            parts = [f"{col}: {row[col]}" for col in df.columns]
+            docs.append(Document(page_content=" | ".join(parts)))
+        return docs
+    return TextLoader(p, encoding="utf-8").load()
 
-docs = load_docs(file_path)
-pipeline = initialize_pipeline(docs)
+docs     = load_documents(file_path)
+pipeline = build_pipeline(docs, file_hash)
 
-# Initialize chat history and logging
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
-    # Add header to log file
+# — Chat UI & logging —
+if "history" not in st.session_state:
+    st.session_state.history = []
     with open(LOG_FILE, "a", encoding="utf-8") as log:
-        log.write(f"\n=== Chat Session Started: {time.strftime(time_format)} ===\n")
+        log.write(f"\n=== Session start: {time.strftime(TIME_FMT)} ===\n")
 
-# User input and response
 def log_interaction(user_q: str, bot_a: str):
-    timestamp = time.strftime(time_format)
+    t = time.strftime(TIME_FMT)
     with open(LOG_FILE, "a", encoding="utf-8") as log:
-        log.write(f"[{timestamp}] You: {user_q}\n")
-        log.write(f"[{timestamp}] Bot: {bot_a}\n")
+        log.write(f"[{t}] You: {user_q}\n[{t}] Bot: {bot_a}\n")
 
-user_question = st.text_input("You:")
-if st.button("Send") and user_question.strip():
+query = st.text_input("You:")
+if st.button("Send") and query.strip():
     with st.spinner("Thinking..."):
-        result = pipeline.invoke(user_question)
-        answer = result.get("answer", "I don't know.")
-        st.session_state.chat_history.append((user_question, answer))
-        log_interaction(user_question, answer)
+        resp = pipeline.invoke(query)
+        ans  = resp.get("answer", "I don't know.")
+        st.session_state.history.append((query, ans))
+        log_interaction(query, ans)
 
-# Display chat history
-for q, a in st.session_state.chat_history:
+for q, a in st.session_state.history:
     st.markdown(f"**You:** {q}")
     st.markdown(f"**Bot:** {a}")
-
