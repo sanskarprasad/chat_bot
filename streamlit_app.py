@@ -30,7 +30,6 @@ chunk_size = st.sidebar.number_input("Chunk Size", value=1000, min_value=100, st
 chunk_overlap = st.sidebar.number_input("Chunk Overlap", value=100, min_value=0, step=50)
 
 @st.cache_resource
-# Prefix documents with underscore to avoid hashing errors
 def initialize_pipeline(_documents: list[Document]):
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_size,
@@ -72,8 +71,7 @@ def initialize_pipeline(_documents: list[Document]):
 
     return pipeline
 
-# App title and file upload
-st.title("Innovatech Solutions RAG Chatbot")
+st.title("RAG Chatbot")
 uploaded_file = st.file_uploader(
     "Upload your knowledge base", type=["txt", "pdf", "json"]
 )
